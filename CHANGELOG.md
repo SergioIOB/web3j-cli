@@ -12,6 +12,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 ### Features
 
 * Updated web3j to latest version 4.12.0 [#111](https://github.com/hyperledger/web3j-cli/pull/111)
+* Add generateBoth flag [#114](https://github.com/hyperledger/web3j-cli/pull/114)
 
 ### BREAKING CHANGES
 

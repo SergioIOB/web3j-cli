@@ -21,6 +21,7 @@ import org.web3j.abi.datatypes.Address;
 import org.web3j.codegen.Console;
 import org.web3j.codegen.SolidityFunctionWrapperGenerator;
 import org.web3j.console.Web3jVersionProvider;
+import org.web3j.tx.Contract;
 
 import static org.web3j.codegen.Console.exitError;
 import static picocli.CommandLine.Help.Visibility.ALWAYS;
@@ -94,6 +95,11 @@ public class SolidityGenerateCommand implements Runnable {
             description = "Use Java primitive types.")
     private boolean primitiveTypes = false;
 
+    @Option(
+            names = {"-B", "--generateBoth"},
+            description = "Generate both send_ and call_ functions.")
+    private boolean generateBoth = false;
+
     @Override
     public void run() {
         try {
@@ -111,7 +117,10 @@ public class SolidityGenerateCommand implements Runnable {
                             packageName,
                             useJavaTypes,
                             primitiveTypes,
-                            addressLength)
+                            generateBoth,
+                            Contract.class,
+                            addressLength,
+                            false)
                     .generate();
         } catch (Exception e) {
             exitError(e);

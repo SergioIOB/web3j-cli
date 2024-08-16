@@ -11,7 +11,8 @@ plugins {
     id "de.undercouch.download" version "4.1.2"
     id "de.marcphilipp.nexus-publish" version "0.4.0"
     id 'io.codearte.nexus-staging' version '0.30.0'
-    id "com.jfrog.bintray" version "1.8.4"
+    // TODO decide if kept or not
+    // id "com.jfrog.bintray" version "1.8.4"
 }
 
 description 'Web3j command line tools'
@@ -29,11 +30,13 @@ ext {
     wireMockVersion = '3.6.0'
     kotlinLoggin = '3.0.5'
     dockerJavaVersion = '3.3.6'
-    web3jEpirusVersion = '0.0.7'
+    web3jEpirusVersion = '0.0.6'
     log4jVersion = '2.23.1'
     semverVersion = '0.10.2'
     commonsLangVersion = '3.14.0'
     jansiVersion = '2.4.1'
+    kotlinPoetVersion = '1.18.1'
+    javaPoetVersion = '1.13.0'
 }
 
 
@@ -58,7 +61,6 @@ apply {
 }
 
 repositories {
-    jcenter()
     mavenCentral()
     mavenLocal()
     maven { url "https://dl.bintray.com/ethereum/maven/" }
@@ -91,6 +93,8 @@ dependencies {
             "org.web3j:hosted-providers:$web3jVersion",
             "io.epirus:epirus-web3j:$web3jEpirusVersion",
             "info.picocli:picocli:$picocli",
+            "com.squareup:kotlinpoet:$kotlinPoetVersion",
+            "com.squareup:javapoet:$javaPoetVersion",
             files('libs/smartcheck.jar'),
             "com.google.code.gson:gson:$gsonVersion",
             "org.apache.commons:commons-lang3:$commonsLangVersion",
