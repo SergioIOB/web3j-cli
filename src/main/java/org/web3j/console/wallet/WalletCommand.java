@@ -29,8 +29,7 @@ import org.web3j.console.wallet.subcommands.*;
             WalletCreateCommand.class,
             WalletUpdateCommand.class,
             WalletSendCommand.class,
-            WalletImportCommand.class,
-            WalletFundCommand.class
+            WalletImportCommand.class
         },
         versionProvider = Web3jVersionProvider.class,
         synopsisHeading = "%n",

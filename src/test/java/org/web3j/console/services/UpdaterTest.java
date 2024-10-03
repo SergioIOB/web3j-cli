@@ -13,85 +13,102 @@
 package org.web3j.console.services;
 
 import java.io.IOException;
-import java.util.UUID;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
+import org.web3j.console.config.CliConfig;
 import org.web3j.console.config.ConfigManager;
 import org.web3j.console.utils.CliVersion;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.web3j.console.config.ConfigManager.config;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 public class UpdaterTest {
-    private static WireMockServer wireMockServer;
+
+    private WireMockServer wireMockServer;
 
     @BeforeEach
-    void setup() throws IOException {
-        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
+    public void setUp() {
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().port(8089));
         wireMockServer.start();
-        WireMock.configureFor("localhost", wireMockServer.port());
-        ConfigManager.setDevelopment(
-                UUID.randomUUID().toString(), CliVersion.getVersion(), null, null, null, false);
+        WireMock.configureFor("localhost", 8089);
     }
 
     @AfterEach
-    void tearDown() {
+    public void tearDown() {
         wireMockServer.stop();
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"4.5.6", "4.5.7"})
-    void testUpdateCheckWorksSuccessfullyWhenUpdateAvailable(String version) {
-        testWorksWithVersion(version, "4.5.6");
     }
 
     @Test
-    void testCurrentVersion() throws Exception {
-        String currentVersion = CliVersion.getVersion();
-        testWorksWithVersion(currentVersion, currentVersion);
+    public void testPromptIfUpdateAvailableWhenUpdateIsAvailable() throws IOException {
+        // Mock static CliVersion class
+        try (MockedStatic<CliVersion> cliVersionMock = mockStatic(CliVersion.class)) {
+            cliVersionMock.when(CliVersion::getVersion).thenReturn("1.0.0");
+            CliConfig mockConfig = mock(CliConfig.class);
+            ConfigManager.config = mockConfig;
+
+            // Mock config's getUpdatePrompt() method
+            when(mockConfig.getUpdatePrompt())
+                    .thenReturn("curl -L get.web3j.io | sh && source ~/.web3j/source.sh");
+
+            // Set up WireMock to simulate GitHub response for the latest version
+            wireMockServer.stubFor(
+                    get(urlEqualTo("/repos/hyperledger/web3j-cli/releases/latest"))
+                            .willReturn(
+                                    aResponse()
+                                            .withStatus(200)
+                                            .withBody("{ \"tag_name\": \"v1.1.0\" }")));
+            String originalUrl = Updater.GITHUB_API_URL;
+            Updater.GITHUB_API_URL =
+                    "http://localhost:8089/repos/hyperledger/web3j-cli/releases/latest";
+
+            try {
+                Updater.promptIfUpdateAvailable();
+            } finally {
+                Updater.GITHUB_API_URL = originalUrl;
+            }
+
+            // Verify that the update prompt was called with the correct message
+            Mockito.verify(mockConfig).getUpdatePrompt();
+        }
     }
 
-    private void testWorksWithVersion(String version, String currentVersion) {
-        String validUpdateResponse =
-                String.format(
-                        "{\n"
-                                + "  \"latest\": {\n"
-                                + "    \"version\": \"%s\",\n"
-                                + "    \"install_unix\": \"curl -L get.web3j.io | sh\",\n"
-                                + "    \"install_win\": \"Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/epirus/epirus-installer/master/installer.ps1'))\"\n"
-                                + "  }\n"
-                                + "}",
-                        version);
+    @Test
+    public void testPromptIfUpdateAvailableWhenNoUpdateIsAvailable() throws IOException {
+        // Mock static CliVersion class
+        try (MockedStatic<CliVersion> cliVersionMock = mockStatic(CliVersion.class)) {
+            cliVersionMock.when(CliVersion::getVersion).thenReturn("1.1.0");
+            CliConfig mockConfig = mock(CliConfig.class);
+            ConfigManager.config = mockConfig;
 
-        stubFor(
-                post(urlPathMatching("/api/epirus/versions/latest"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withHeader("Content-Type", "application/json")
-                                        .withBody(validUpdateResponse)));
+            // Set up WireMock to simulate GitHub response for the latest version
+            wireMockServer.stubFor(
+                    get(urlEqualTo("/repos/hyperledger/web3j-cli/releases/latest"))
+                            .willReturn(
+                                    aResponse()
+                                            .withStatus(200)
+                                            .withBody("{ \"tag_name\": \"v1.1.0\" }")));
 
-        Updater.onlineUpdateCheck(
-                String.format(
-                        "http://localhost:%s/api/epirus/versions/latest", wireMockServer.port()));
+            String originalUrl = Updater.GITHUB_API_URL;
+            Updater.GITHUB_API_URL =
+                    "http://localhost:8089/repos/hyperledger/web3j-cli/releases/latest";
 
-        verify(postRequestedFor(urlEqualTo("/api/epirus/versions/latest")));
-
-        if (version.equals(currentVersion)) {
-            assertEquals(currentVersion, config.getLatestVersion());
-        } else {
-            assertEquals(version, config.getLatestVersion());
+            try {
+                Updater.promptIfUpdateAvailable();
+            } finally {
+                Updater.GITHUB_API_URL = originalUrl;
+            }
+            Mockito.verify(mockConfig, Mockito.never()).getUpdatePrompt();
         }
-
-        wireMockServer.stop();
     }
 }

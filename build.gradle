@@ -11,8 +11,6 @@ plugins {
     id "de.undercouch.download" version "4.1.2"
     id "de.marcphilipp.nexus-publish" version "0.4.0"
     id 'io.codearte.nexus-staging' version '0.30.0'
-    // TODO decide if kept or not
-    // id "com.jfrog.bintray" version "1.8.4"
 }
 
 description 'Web3j command line tools'
@@ -20,7 +18,7 @@ mainClassName = 'org.web3j.console.Web3j'
 applicationName = 'web3j'
 
 ext {
-    web3jVersion = '4.12.1'
+    web3jVersion = '4.12.2'
     picocli = '4.7.6'
     slf4jVersion = '2.0.13'
     junitVersion = '5.9.3'
@@ -30,7 +28,6 @@ ext {
     wireMockVersion = '3.6.0'
     kotlinLoggin = '3.0.5'
     dockerJavaVersion = '3.3.6'
-    web3jEpirusVersion = '0.0.6'
     log4jVersion = '2.23.1'
     semverVersion = '0.10.2'
     commonsLangVersion = '3.14.0'
@@ -91,7 +88,6 @@ dependencies {
             "org.web3j:core:$web3jVersion",
             "org.web3j:crypto:$web3jVersion",
             "org.web3j:hosted-providers:$web3jVersion",
-            "io.epirus:epirus-web3j:$web3jEpirusVersion",
             "info.picocli:picocli:$picocli",
             "com.squareup:kotlinpoet:$kotlinPoetVersion",
             "com.squareup:javapoet:$javaPoetVersion",

@@ -15,74 +15,60 @@ package org.web3j.console.services;
 import java.io.IOException;
 
 import com.github.zafarkhaja.semver.Version;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import okhttp3.*;
 
 import org.web3j.console.utils.CliVersion;
-import org.web3j.console.utils.OSUtils;
 
 import static org.web3j.console.config.ConfigManager.config;
 
 public class Updater {
-    private static final String DEFAULT_UPDATE_URL =
-            "https://internal.services.web3labs.com/api/epirus/versions/latest";
+    static String GITHUB_API_URL =
+            "https://api.github.com/repos/hyperledger/web3j-cli/releases/latest";
 
     public static void promptIfUpdateAvailable() throws IOException {
-        String version = CliVersion.getVersion();
-        if (config.getLatestVersion() != null
-                && Version.valueOf(config.getLatestVersion()).greaterThan(Version.valueOf(version))
+        String version = CliVersion.getVersion(); // Get current version from CLI
+        String latestVersion = getLatestVersionFromGitHub(); // Fetch latest version from GitHub
+
+        if (latestVersion != null
+                && Version.valueOf(latestVersion).greaterThan(Version.valueOf(version))
                 && !version.contains("SNAPSHOT")) {
             System.out.println(
                     String.format(
                             "Your current Web3j version is: "
                                     + version
                                     + ". The latest Version is: "
-                                    + config.getLatestVersion()
+                                    + latestVersion
                                     + ". To update, run: %s",
                             config.getUpdatePrompt()));
         }
     }
 
     public static void onlineUpdateCheck() {
-        onlineUpdateCheck(DEFAULT_UPDATE_URL);
+        try {
+            promptIfUpdateAvailable();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public static void onlineUpdateCheck(String updateUrl) {
+    private static String getLatestVersionFromGitHub() {
         OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder().url(GITHUB_API_URL).get().build();
 
-        RequestBody updateBody =
-                new MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("os", OSUtils.determineOS().toString())
-                        .addFormDataPart("clientId", config.getClientId())
-                        .addFormDataPart("data", "update_check")
-                        .build();
-
-        Request updateCheckRequest = new Request.Builder().url(updateUrl).post(updateBody).build();
-
-        try {
-            Response sendRawResponse = client.newCall(updateCheckRequest).execute();
-            JsonElement element;
-            ResponseBody body;
-            if (sendRawResponse.code() == 200
-                    && (body = sendRawResponse.body()) != null
-                    && (element = JsonParser.parseString(body.string())) != null
-                    && element.isJsonObject()) {
-                JsonObject rootObj = element.getAsJsonObject().get("latest").getAsJsonObject();
-                String latestVersion = rootObj.get("version").getAsString();
-                if (!latestVersion.equals(CliVersion.getVersion())) {
-                    config.setLatestVersion(latestVersion);
-                    config.setUpdatePrompt(
-                            rootObj.get(
-                                            OSUtils.determineOS() == OSUtils.OS.WINDOWS
-                                                    ? "install_win"
-                                                    : "install_unix")
-                                    .getAsString());
+        try (Response response = client.newCall(request).execute()) {
+            if (response.isSuccessful()) {
+                ResponseBody body = response.body();
+                if (body != null) {
+                    JsonObject jsonObject = JsonParser.parseString(body.string()).getAsJsonObject();
+                    String tagName = jsonObject.get("tag_name").getAsString();
+                    return tagName.replace("v", "");
                 }
             }
-        } catch (Exception ignored) {
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        return null;
     }
 }
