@@ -24,7 +24,7 @@ import org.web3j.console.utils.CliVersion;
 import static org.web3j.console.config.ConfigManager.config;
 
 public class Updater {
-    static String GITHUB_API_URL =
+    private static final String GITHUB_API_URL =
             "https://api.github.com/repos/hyperledger/web3j-cli/releases/latest";
 
     public static void promptIfUpdateAvailable() throws IOException {
@@ -53,7 +53,7 @@ public class Updater {
         }
     }
 
-    private static String getLatestVersionFromGitHub() {
+    public static String getLatestVersionFromGitHub() {
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder().url(GITHUB_API_URL).get().build();
 

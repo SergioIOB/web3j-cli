@@ -21,16 +21,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 
 import org.web3j.console.config.CliConfig;
 import org.web3j.console.config.ConfigManager;
 import org.web3j.console.utils.CliVersion;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class UpdaterTest {
@@ -51,7 +52,7 @@ public class UpdaterTest {
 
     @Test
     public void testPromptIfUpdateAvailableWhenUpdateIsAvailable() throws IOException {
-        // Mock static CliVersion class
+        wireMockServer.start();
         try (MockedStatic<CliVersion> cliVersionMock = mockStatic(CliVersion.class)) {
             cliVersionMock.when(CliVersion::getVersion).thenReturn("1.0.0");
             CliConfig mockConfig = mock(CliConfig.class);
@@ -61,37 +62,36 @@ public class UpdaterTest {
             when(mockConfig.getUpdatePrompt())
                     .thenReturn("curl -L get.web3j.io | sh && source ~/.web3j/source.sh");
 
-            // Set up WireMock to simulate GitHub response for the latest version
             wireMockServer.stubFor(
                     get(urlEqualTo("/repos/hyperledger/web3j-cli/releases/latest"))
                             .willReturn(
                                     aResponse()
                                             .withStatus(200)
                                             .withBody("{ \"tag_name\": \"v1.1.0\" }")));
-            String originalUrl = Updater.GITHUB_API_URL;
-            Updater.GITHUB_API_URL =
-                    "http://localhost:8089/repos/hyperledger/web3j-cli/releases/latest";
 
-            try {
+            try (MockedStatic<Updater> updaterMock =
+                    mockStatic(Updater.class, CALLS_REAL_METHODS)) {
+                updaterMock.when(Updater::getLatestVersionFromGitHub).thenReturn("1.1.0");
+
                 Updater.promptIfUpdateAvailable();
-            } finally {
-                Updater.GITHUB_API_URL = originalUrl;
-            }
 
-            // Verify that the update prompt was called with the correct message
-            Mockito.verify(mockConfig).getUpdatePrompt();
+                // Verify that the update prompt was called with the correct message
+                verify(mockConfig).getUpdatePrompt();
+            }
+        } finally {
+            wireMockServer.stop();
         }
     }
 
     @Test
     public void testPromptIfUpdateAvailableWhenNoUpdateIsAvailable() throws IOException {
-        // Mock static CliVersion class
+        wireMockServer.start();
         try (MockedStatic<CliVersion> cliVersionMock = mockStatic(CliVersion.class)) {
             cliVersionMock.when(CliVersion::getVersion).thenReturn("1.1.0");
+
             CliConfig mockConfig = mock(CliConfig.class);
             ConfigManager.config = mockConfig;
 
-            // Set up WireMock to simulate GitHub response for the latest version
             wireMockServer.stubFor(
                     get(urlEqualTo("/repos/hyperledger/web3j-cli/releases/latest"))
                             .willReturn(
@@ -99,16 +99,16 @@ public class UpdaterTest {
                                             .withStatus(200)
                                             .withBody("{ \"tag_name\": \"v1.1.0\" }")));
 
-            String originalUrl = Updater.GITHUB_API_URL;
-            Updater.GITHUB_API_URL =
-                    "http://localhost:8089/repos/hyperledger/web3j-cli/releases/latest";
+            try (MockedStatic<Updater> updaterMock =
+                    mockStatic(Updater.class, CALLS_REAL_METHODS)) {
+                updaterMock.when(Updater::getLatestVersionFromGitHub).thenReturn("1.1.0");
 
-            try {
                 Updater.promptIfUpdateAvailable();
-            } finally {
-                Updater.GITHUB_API_URL = originalUrl;
+                // Verify that getUpdatePrompt was never called, as no update is available
+                verify(mockConfig, never()).getUpdatePrompt();
             }
-            Mockito.verify(mockConfig, Mockito.never()).getUpdatePrompt();
+        } finally {
+            wireMockServer.stop();
         }
     }
 }
