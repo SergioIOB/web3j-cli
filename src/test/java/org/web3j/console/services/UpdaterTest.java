@@ -55,6 +55,7 @@ public class UpdaterTest {
         wireMockServer.start();
         try (MockedStatic<CliVersion> cliVersionMock = mockStatic(CliVersion.class)) {
             cliVersionMock.when(CliVersion::getVersion).thenReturn("1.0.0");
+
             CliConfig mockConfig = mock(CliConfig.class);
             ConfigManager.config = mockConfig;
 
@@ -72,9 +73,7 @@ public class UpdaterTest {
             try (MockedStatic<Updater> updaterMock =
                     mockStatic(Updater.class, CALLS_REAL_METHODS)) {
                 updaterMock.when(Updater::getLatestVersionFromGitHub).thenReturn("1.1.0");
-
                 Updater.promptIfUpdateAvailable();
-
                 // Verify that the update prompt was called with the correct message
                 verify(mockConfig).getUpdatePrompt();
             }
@@ -102,7 +101,6 @@ public class UpdaterTest {
             try (MockedStatic<Updater> updaterMock =
                     mockStatic(Updater.class, CALLS_REAL_METHODS)) {
                 updaterMock.when(Updater::getLatestVersionFromGitHub).thenReturn("1.1.0");
-
                 Updater.promptIfUpdateAvailable();
                 // Verify that getUpdatePrompt was never called, as no update is available
                 verify(mockConfig, never()).getUpdatePrompt();
