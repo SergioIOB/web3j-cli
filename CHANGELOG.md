@@ -11,7 +11,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### Features
 
-* 
+* Updated web3j to 4.12.2 and removed Epirus [#116](https://github.com/hyperledger/web3j-cli/pull/116)
 
 ### BREAKING CHANGES
 
