@@ -69,6 +69,11 @@ public class TruffleGenerateCommand implements Runnable {
             description = "Use Solidity types.")
     private boolean solidityTypes;
 
+    @Option(
+            names = {"-B", "--generateBoth"},
+            description = "Generate both send_ and call_ functions.")
+    private boolean generateBoth = false;
+
     @Override
     public void run() {
 
@@ -80,7 +85,7 @@ public class TruffleGenerateCommand implements Runnable {
                             destinationDirLocation.getAbsolutePath(),
                             basePackageName,
                             useJavaNativeTypes,
-                            true)
+                            generateBoth)
                     .generate();
         } catch (Exception e) {
             Console.exitError(e);
